@@ -1525,6 +1525,16 @@ inline Ctxt innerProduct(const std::vector<Ctxt>& v1,
   return ret;
 }
 
+//! @brief Multiply two pairs of ciphertexts and add using delayed relinearization.
+//! Computes relin(c0*c1 + c2*c3) with a single relinearization, which is more
+//! efficient than computing relin(c0*c1) + relin(c2*c3) (two relinearizations).
+//! This exploits the linearity of relinearization:
+//!   relin(c0*c1) + relin(c2*c3) = relin(c0*c1 + c2*c3)
+Ctxt mulAddWithDelayedRelin(const Ctxt& c0,
+                             const Ctxt& c1,
+                             const Ctxt& c2,
+                             const Ctxt& c3);
+
 //! frobeniusAutomorph: free function version of frobeniusAutomorph method
 inline void frobeniusAutomorph(Ctxt& ctxt, long j)
 {
