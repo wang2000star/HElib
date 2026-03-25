@@ -1827,6 +1827,27 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   reLinearize(); // re-linearize after all the multiplications
 }
 
+// Multiply two pairs of ciphertexts and add with a single (delayed) relin.
+// This exploits the linearity of relinearization:
+//   relin(c0*c1) + relin(c2*c3) = relin(c0*c1 + c2*c3)
+// so we save one relinearization compared to the naive approach.
+Ctxt mulAddWithDelayedRelin(const Ctxt& c0,
+                             const Ctxt& c1,
+                             const Ctxt& c2,
+                             const Ctxt& c3)
+{
+  Ctxt result(c0);
+  result.multLowLvl(c1); // result = c0 * c1, no relinearization yet
+
+  Ctxt tmp(c2);
+  tmp.multLowLvl(c3); // tmp = c2 * c3, no relinearization yet
+
+  result += tmp;       // result = c0*c1 + c2*c3 (still degree-2 parts)
+  result.reLinearize(); // single relinearization
+
+  return result;
+}
+
 // Multiply-by-constant, it is assumed that the size of this
 // constant fits in a double float
 void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)

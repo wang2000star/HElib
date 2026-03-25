@@ -253,6 +253,47 @@ TEST_P(TestCtxtWithBadDimensions, rotate1DRotatesCorrectlyWithBadDimensions)
   }
 }
 
+TEST_P(TestCtxt, mulAddWithDelayedRelinGivesSameResultAsTwoSeparateRelins)
+{
+  // Encrypt four distinct plaintext vectors: [1,2,...], [2,3,...], [3,4,...], [4,5,...]
+  std::vector<long> data0(ea.size()), data1(ea.size()), data2(ea.size()),
+      data3(ea.size());
+  std::iota(data0.begin(), data0.end(), 1);
+  std::iota(data1.begin(), data1.end(), 2);
+  std::iota(data2.begin(), data2.end(), 3);
+  std::iota(data3.begin(), data3.end(), 4);
+
+  helib::Ptxt<helib::BGV> ptxt0(context, data0);
+  helib::Ptxt<helib::BGV> ptxt1(context, data1);
+  helib::Ptxt<helib::BGV> ptxt2(context, data2);
+  helib::Ptxt<helib::BGV> ptxt3(context, data3);
+
+  helib::Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
+  publicKey.Encrypt(c0, ptxt0);
+  publicKey.Encrypt(c1, ptxt1);
+  publicKey.Encrypt(c2, ptxt2);
+  publicKey.Encrypt(c3, ptxt3);
+
+  // Reference: relin(c0*c1) + relin(c2*c3) using two separate multiplications
+  helib::Ctxt ref(c0);
+  ref.multiplyBy(c1);
+  helib::Ctxt ref_tmp(c2);
+  ref_tmp.multiplyBy(c3);
+  ref += ref_tmp;
+
+  // Delayed-relin version: relin(c0*c1 + c2*c3) using one relinearization
+  helib::Ctxt result = helib::mulAddWithDelayedRelin(c0, c1, c2, c3);
+
+  // Both should decrypt to the same plaintext: ptxt0*ptxt1 + ptxt2*ptxt3
+  helib::Ptxt<helib::BGV> decRef(context), decResult(context);
+  secretKey.Decrypt(decRef, ref);
+  secretKey.Decrypt(decResult, result);
+
+  EXPECT_EQ(decRef, decResult)
+      << "mulAddWithDelayedRelin should give the same plaintext result as "
+         "two separate multiplications followed by addition";
+}
+
 // Use this when thoroughly exploring an (m, p) grid of parameters.
 // std::vector<BGVParameters> getParameters(bool good)
 // {
