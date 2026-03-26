@@ -2894,6 +2894,19 @@ void totalProduct(Ctxt& out, const std::vector<Ctxt>& v)
     recursiveTotalProduct(out, &v[0], n); // do the actual work
 }
 
+// Sum of a vector of ciphertexts, set out=sum_{i=0}^{n-1} v[i].
+void totalSum(Ctxt& out, const std::vector<Ctxt>& v)
+{
+  long n = v.size();
+  if (n <= 0) {
+    out.clear();
+    return;
+  }
+  out = v[0];
+  for (long i = 1; i < n; i++)
+    out += v[i];
+}
+
 // Compute the inner product of two vectors of ciphertexts, this routine uses
 // the lower-level *= operator and does only one re-linearization at the end.
 void innerProduct(Ctxt& result, const CtPtrs& v1, const CtPtrs& v2)

@@ -294,6 +294,83 @@ TEST_P(TestCtxt, mulAddWithDelayedRelinGivesSameResultAsTwoSeparateRelins)
          "two separate multiplications followed by addition";
 }
 
+TEST_P(TestCtxt, totalSumOfVectorGivesSameResultAsSequentialAddition)
+{
+  // Encrypt five distinct plaintext vectors and verify that totalSum gives
+  // the same result as sequential += operations.
+  const long nCtxts = 5;
+  std::vector<helib::Ptxt<helib::BGV>> ptxts;
+  std::vector<helib::Ctxt> ctxts;
+  ptxts.reserve(nCtxts);
+  ctxts.reserve(nCtxts);
+  for (long k = 0; k < nCtxts; ++k) {
+    std::vector<long> data(ea.size());
+    std::iota(data.begin(), data.end(), k + 1);
+    ptxts.emplace_back(context, data);
+    ctxts.emplace_back(publicKey);
+    publicKey.Encrypt(ctxts.back(), ptxts.back());
+  }
+
+  // Reference: sequential addition
+  helib::Ctxt ref(ctxts[0]);
+  for (long k = 1; k < nCtxts; ++k)
+    ref += ctxts[k];
+
+  // totalSum (void version)
+  helib::Ctxt out(publicKey);
+  helib::totalSum(out, ctxts);
+
+  helib::Ptxt<helib::BGV> decRef(context), decOut(context);
+  secretKey.Decrypt(decRef, ref);
+  secretKey.Decrypt(decOut, out);
+
+  EXPECT_EQ(decRef, decOut)
+      << "totalSum (void) should give the same plaintext result as sequential "
+         "addition";
+
+  // totalSum (value-returning version)
+  helib::Ctxt outVal = helib::totalSum(ctxts);
+  helib::Ptxt<helib::BGV> decOutVal(context);
+  secretKey.Decrypt(decOutVal, outVal);
+
+  EXPECT_EQ(decRef, decOutVal)
+      << "totalSum (value-returning) should give the same plaintext result as "
+         "sequential addition";
+}
+
+TEST_P(TestCtxt, totalSumOfSingleCiphertextReturnsThatCiphertext)
+{
+  std::vector<long> data(ea.size());
+  std::iota(data.begin(), data.end(), 1);
+  helib::Ptxt<helib::BGV> ptxt(context, data);
+  helib::Ctxt ctxt(publicKey);
+  publicKey.Encrypt(ctxt, ptxt);
+
+  helib::Ctxt out(publicKey);
+  helib::totalSum(out, {ctxt});
+
+  helib::Ptxt<helib::BGV> decOut(context);
+  secretKey.Decrypt(decOut, out);
+
+  EXPECT_EQ(ptxt, decOut)
+      << "totalSum of a single ciphertext should decrypt to the original "
+         "plaintext";
+}
+
+TEST_P(TestCtxt, totalSumOfEmptyVectorClearsCiphertext)
+{
+  std::vector<long> data(ea.size(), 42);
+  helib::Ptxt<helib::BGV> ptxt(context, data);
+  helib::Ctxt out(publicKey);
+  publicKey.Encrypt(out, ptxt); // start with a non-empty ciphertext
+
+  const std::vector<helib::Ctxt> empty;
+  helib::totalSum(out, empty);
+
+  EXPECT_TRUE(out.isEmpty())
+      << "totalSum of an empty vector should clear the output ciphertext";
+}
+
 // Use this when thoroughly exploring an (m, p) grid of parameters.
 // std::vector<BGVParameters> getParameters(bool good)
 // {

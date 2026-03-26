@@ -1487,6 +1487,24 @@ public:
 // will make the result unpredictable.
 void totalProduct(Ctxt& out, const std::vector<Ctxt>& v);
 
+//! @brief Sum of a vector of ciphertexts, set out=sum_{i=0}^{n-1} v[i].
+//! All ciphertexts must share the same context and public key.
+//! If v is empty, out is cleared.
+void totalSum(Ctxt& out, const std::vector<Ctxt>& v);
+
+//! @brief Sum of a vector of ciphertexts, returns sum_{i=0}^{n-1} v[i].
+//! v must be non-empty; all ciphertexts must share the same context and
+//! public key.
+//! @throws LogicError if v is empty.
+inline Ctxt totalSum(const std::vector<Ctxt>& v)
+{
+  if (v.empty())
+    throw LogicError("totalSum: input vector must be non-empty");
+  Ctxt ret(v[0].getPubKey());
+  totalSum(ret, v);
+  return ret;
+}
+
 //! For i=n-1...0, set v[i]=prod_{j<=i} v[j]
 //! This implementation uses depth log n and (nlog n)/2 products
 void incrementalProduct(std::vector<Ctxt>& v);
